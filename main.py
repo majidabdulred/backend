@@ -45,7 +45,7 @@ async def ping_session(host_session_id=Header(), version=Header()):
 @app.post("/v2/request/assign", response_model=Union[
     schema.AssignImageResponseCustom, schema.AssignImageResponseUpscale])
 async def assign_request(host_session_id=Header(), version=Header()):
-    if not await host_session.host_exits(host_session_id):
+    if not await host_session.host_exists(host_session_id):
         raise HTTPException(status_code=400, detail="Host Session Id does not exist")
     payload = await requests_col.get_available_request(host_session_id)
     asyncio.get_event_loop().create_task(
