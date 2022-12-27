@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-from aws import aws_client
 from dotenv import load_dotenv
 from main import app
 import pytest

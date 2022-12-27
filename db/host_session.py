@@ -1,10 +1,10 @@
 from db.client import db
-from models import schema
-from typing import Optional, Union, List, Tuple
+from app import schema
+from typing import List, Tuple
 from bson import ObjectId
 from pymongo import UpdateOne
 from datetime import datetime
-from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorCollection
 from db import sqlite
 
 collection: AsyncIOMotorCollection = db.get_collection("hosts")

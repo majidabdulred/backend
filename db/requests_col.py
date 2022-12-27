@@ -1,4 +1,3 @@
-import asyncio
 import secrets
 
 from fastapi import HTTPException
@@ -8,7 +7,7 @@ from typing import Optional, Union, Dict
 from datetime import datetime
 from pymongo import ReturnDocument
 from bson import ObjectId
-from aws import aws_client
+from app import aws_client
 
 collection = db.get_collection("requests")
 
