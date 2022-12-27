@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime
 from typing import Optional, Union, Dict
 
-from bson import ObjectId
+from bson import ObjectId,Int64
 from fastapi import HTTPException
 from pymongo import ReturnDocument
 
@@ -20,6 +20,7 @@ async def create_custom_request(data):
     """
     data = data.dict()
     data.update({"status": "available",
+                 "discord_id": Int64(data.get("discord_id")),
                  "created_at": datetime.utcnow(),
                  "lastModified": datetime.utcnow()})
     request = await collection.insert_one(data)
@@ -73,6 +74,7 @@ async def create_upscale_request(data):
 
     data.update({"status": "available",
                  "raw_image": raw_image,
+                 "discord_id": Int64(data.get("discord_id")),
                  "created_at": datetime.utcnow(),
                  "lastModified": datetime.utcnow()})
 

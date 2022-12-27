@@ -44,6 +44,7 @@ class AssignImageResponseCustom(BaseModel):
 
 class CreateRequestCustom(BaseModel):
     request_type = "custom"
+    discord_id: int
     prompt: str
     seed: Optional[int] = int(random.random() * 1000000)
     sampler_name: Optional[str] = "Euler a"
@@ -59,6 +60,7 @@ class CreateRequestCustom(BaseModel):
 
 class CreateRequestUpscale(BaseModel):
     request_type = "upscale"
+    discord_id: int
     resize_mode: Optional[int] = 1
     show_extras_results = False
     upscaling_resize_w: Optional[int] = 2048
