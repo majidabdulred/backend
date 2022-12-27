@@ -1,6 +1,7 @@
 import asyncio
-from db import sqlite
+
 from db import host_session
+from db import sqlite
 
 
 async def update_hosts_data(interval: int = 60):
@@ -9,6 +10,7 @@ async def update_hosts_data(interval: int = 60):
     :param interval:
     :return:
     """
+
     async def task():
         hosts = await sqlite.get_all_hosts()
         await host_session.update_hosts_status(hosts)
@@ -20,4 +22,3 @@ async def update_hosts_data(interval: int = 60):
 
 async def host_went_offline(host_id: str):
     pass
-

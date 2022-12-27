@@ -1,12 +1,11 @@
-from fastapi.testclient import TestClient
-from dotenv import load_dotenv
-from main import app
 import pytest
+from dotenv import load_dotenv
+from fastapi.testclient import TestClient
+
+from main import app
 
 client = TestClient(app)
 load_dotenv()
-
-
 
 
 def test_create_session():
@@ -42,6 +41,7 @@ def test_submit_request():
     assert response.json() == {"success": True}
     assert response.status_code == 200
 
+
 @pytest.mark.full_test
 def test_client():
     response = client.post("/v2/session/create", json={"gpu_uuid": "test-uuid",
@@ -76,4 +76,4 @@ def test_client():
                            json={"session_id": session_id, "file": base64_str})
     assert response.json() == {"success": True}
     assert response.status_code == 200
-    print("Test passed",session_id)
+    print("Test passed", session_id)

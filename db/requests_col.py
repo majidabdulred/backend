@@ -1,13 +1,13 @@
 import secrets
-
-from fastapi import HTTPException
-
-from db.client import db
-from typing import Optional, Union, Dict
 from datetime import datetime
-from pymongo import ReturnDocument
+from typing import Optional, Union, Dict
+
 from bson import ObjectId
+from fastapi import HTTPException
+from pymongo import ReturnDocument
+
 from app import aws_client
+from db.client import db
 
 collection = db.get_collection("requests")
 
@@ -104,6 +104,8 @@ async def delete_request(session_id: str):
     status = await collection.delete_one({'_id': ObjectId(session_id)})
     if not status.deleted_count:
         raise HTTPException(status_code=404, detail="Session_id not found")
+
+
 async def get_available_request(host_session_id) -> Union[None, Dict]:
     """
     Returns the first request that is available for processing.
@@ -158,6 +160,6 @@ async def __create_payload(request):
             "upscaler_2": request.get("upscaler_2"),
             "extras_upscaler_2_visibility": request.get("extras_upscaler_2_visibility"),
             "upscale_first": request.get("upscale_first"),
-            "upscaling_resize" : request.get("upscaling_resize"),
+            "upscaling_resize": request.get("upscaling_resize"),
         }
     return payload

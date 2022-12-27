@@ -1,8 +1,9 @@
-import os
-from dotenv import load_dotenv
-import aioboto3
 import base64
 import io
+import os
+
+import aioboto3
+from dotenv import load_dotenv
 
 load_dotenv()
 ACCESS_KEY = os.getenv("AWS_KEY")
@@ -21,10 +22,13 @@ async def upload_base64_to_aws(base64_string, name):
         obj = await s3.Object('test-metex', name + ".png")
         await obj.put(Body=base64.b64decode(base64_string.split(",", 1)[0]))
 
+
 async def delete_file(name: str):
     async with session.resource("s3") as s3:
         bucket = await s3.Bucket('test-metex')  #
         await bucket.delete_objects(Delete={"Objects": [{"Key": name}]})
+
+
 async def download_file(name: str) -> str:
     async with session.resource("s3") as s3:
         bucket = await s3.Bucket('test-metex')  #
@@ -40,7 +44,7 @@ async def download_file(name: str) -> str:
 
 
 if __name__ == '__main__':
-    import asyncio
+    pass
 
     # base64_str = open("../app/testimage.txt", "r").read()
     # asyncio.run(upload_base64_to_aws("testimage.png", base64_str))
