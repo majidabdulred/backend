@@ -4,7 +4,7 @@ from typing import List, Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import UpdateOne
-
+from typing import List, Tuple, Union, Dict
 from app import schema
 from db import sqlite
 from db.client import db
@@ -13,6 +13,11 @@ collection: AsyncIOMotorCollection = db.get_collection("hosts")
 
 
 async def create_host_session(data: schema.CreateSessionHostRequest) -> str:
+    """
+    Creates a host session in the database.
+    :param data:
+    :return:
+    """
     host = await collection.find_one({"gpu_uuid": data.gpu_uuid})
     if host:
         return str(host.get("_id"))
@@ -20,7 +25,12 @@ async def create_host_session(data: schema.CreateSessionHostRequest) -> str:
     return str((await collection.insert_one(data)).inserted_id)
 
 
-async def host_exits(host_session_id: str) -> bool:
+async def host_exists(host_session_id: str) -> Union[Dict, None]:
+    """
+    Checks if the host exists in the database.
+    :param host_session_id:
+    :return:
+    """
     return await collection.find_one({"_id": ObjectId(host_session_id)})
 
 
