@@ -54,7 +54,7 @@ async def assign_request(host_session_id=Header(),version=Header()):
 @app.post("/v2/request/submit")
 async def submit_request(data:schema.SubmitImageRequest,host_session_id=Header(),version=Header()):
     try:
-        await aws_client.upload_base64(data.file,data.session_id)
+        await aws_client.upload_base64_to_aws(data.file, data.session_id)
         await requests_col.request_completed(data.session_id)
         asyncio.get_event_loop().create_task(host_session.set_current_processing_as_none(host_session_id))
         return {"success":True}
@@ -63,7 +63,18 @@ async def submit_request(data:schema.SubmitImageRequest,host_session_id=Header()
         return HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@app.post("/v2/request/create-custom",response_model=schema.CreateRequestResponse)
+async def create_custom_request(data:schema.CreateRequestCustom):
+    _id = await requests_col.create_custom_request(data)
+    return {"session_id": _id}
+@app.post("/v2/request/create-upscale",response_model=schema.CreateRequestResponse)
+async def create_upscale_request(data:schema.CreateRequestUpscale):
+    _id = await requests_col.create_upscale_request(data)
+    return {"session_id": _id}
 
+@app.get("/v2/request/status",response_model=schema.StatusRequestResponse)
+async def status_request(session_id:str):
+    return await requests_col.get_request(session_id)
 
 if __name__ == "__main__":
     import uvicorn

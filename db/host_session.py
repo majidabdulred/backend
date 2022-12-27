@@ -29,7 +29,7 @@ async def set_current_processing(host_session_id, session_id):
     :param session_id:
     :return:
     """
-    await collection.update_one({"_id": ObjectId(session_id)}, {"$set": {"current_processing":
+    await collection.update_one({"_id": ObjectId(host_session_id)}, {"$set": {"current_processing":
         {
             "$ref": "requests",
             "$db": "backend",
