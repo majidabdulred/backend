@@ -71,14 +71,22 @@ class CreateRequestUpscale(BaseModel):
     upscaler_2: Optional[str] = "R-ESRGAN 4x+"
     extras_upscaler_2_visibility: Optional[int] = 1
     upscale_first: Optional[bool] = True
-    image: Optional[str]
     prev_session_id: Optional[str]
 
+class CreateRequestImg2Img(BaseModel):
+    request_type = "img2img"
+    discord_id: int
+    prompt: str
+    image: str
 
 class CreateRequestResponse(BaseModel):
     session_id: str
 
-
+class CreateRequestAvatar(BaseModel):
+    session_id: str
+    prompt: str
+    image : str
+    email : str
 class StatusRequestRequest(BaseModel):
     session_id: str
 
