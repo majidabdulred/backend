@@ -7,7 +7,7 @@ import pymongo
 from bson import ObjectId,Int64
 from fastapi import HTTPException
 from pymongo import ReturnDocument
-
+from datetime import datetime, timedelta
 from app import aws_client,schema
 from db.client import db
 
@@ -64,6 +64,7 @@ async def create_avatar_request(data: schema.CreateRequestAvatar):
                  "request_type":"img2img",
                  "status": "available",
                  "raw_image": name,
+                 "testing": True, # To be removed later
                  "created_at": datetime.utcnow(),
                  "lastModified": datetime.utcnow()
                  })
@@ -111,6 +112,11 @@ async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     #     # Using recursion to retry the request for few more times until the image is ready.
     #     await asyncio.sleep(10)
     #     return await get_request(session_id, retry-1)
+
+    # To be removed later
+    elif request.get("status") in ["available","processing"] and \
+            request.get("created_at") + timedelta(seconds=20) < datetime.utcnow():
+        return {"status": "complete", "image": open("app/testimage.txt", "r").read()}
     else:
         # Recursion limit reached.
         return {"status": request.get("status")}
