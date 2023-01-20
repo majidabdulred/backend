@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, Union, Dict
 
 import bson.errors
+import pymongo
 from bson import ObjectId,Int64
 from fastapi import HTTPException
 from pymongo import ReturnDocument
@@ -66,7 +67,10 @@ async def create_avatar_request(data: schema.CreateRequestAvatar):
                  "created_at": datetime.utcnow(),
                  "lastModified": datetime.utcnow()
                  })
-    await collection.insert_one(data)
+    try:
+        await collection.insert_one(data)
+    except pymongo.errors.DuplicateKeyError:
+        raise HTTPException(status_code=404,detail="Duplicate Key Error")
     return _id
 
 async def create_custom_request(data):
