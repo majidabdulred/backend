@@ -114,8 +114,8 @@ async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     #     return await get_request(session_id, retry-1)
 
     # To be removed later
-    elif request.get("status") in ["available","processing"] and \
-            request.get("created_at") + timedelta(seconds=20) < datetime.utcnow():
+    elif request.get("status") == "available" and request.get("testing") and\
+            request.get("created_at") + timedelta(seconds=30) < datetime.utcnow():
         return {"status": "complete", "image": open("app/testimage.txt", "r").read()}
     else:
         # Recursion limit reached.
