@@ -91,7 +91,11 @@ async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     :param session_id:
     :return:
     """
-    request = await collection.find_one({"_id": ObjectId(session_id)})
+    try:
+        request = await collection.find_one({"_id": ObjectId(session_id)})
+    except bson.errors.InvalidBSON:
+        raise HTTPException(status_code=404, detail="Session_id Invalid")
+
     if request is None:
         raise HTTPException(status_code=404, detail="Session_id not found")
     if request.get("status") == "complete":
