@@ -2,7 +2,7 @@ from typing import Optional
 import random
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel,validator
 
 
 class CreateSessionHostRequest(BaseModel):
@@ -87,6 +87,18 @@ class CreateRequestAvatar(BaseModel):
     prompt: str
     image : str
     email : str
+
+    @validator('session_id')
+    def session_id_must_be_valid(cls, v):
+        if len(v) != 24:
+            raise ValueError('session_id must be 12 digits long')
+        try:
+            int(v, 16)
+        except ValueError:
+            raise ValueError('session_id must be a valid hex string')
+        return v
+
+
 class StatusRequestRequest(BaseModel):
     session_id: str
 
