@@ -1,7 +1,8 @@
+import json
 import secrets
 from datetime import datetime
 from typing import Optional, Union, Dict
-
+from bson.json_util import dumps
 import bson.errors
 import pymongo
 from bson import ObjectId,Int64
@@ -101,7 +102,7 @@ async def get_request_data(session_id : str):
 
     if request is None:
         raise HTTPException(status_code=404, detail="Session_id not found")
-    return request
+    return json.loads(dumps(request))
 async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     """
     Returns the request with the given session_id
