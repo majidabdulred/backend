@@ -142,3 +142,4 @@ cython_debug/
 /old_tests.py
 /new.db-journal
 /new.db
+/backend.cmd

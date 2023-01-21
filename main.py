@@ -88,10 +88,18 @@ async def create_avatar_request(data:schema.CreateRequestAvatar):
     _id = await requests_col.create_avatar_request(data)
     return {"session_id":str(_id)}
 
+@app.post("/v2/request/create-variation")
+async def create_variation_request(session_id: str):
+    _id = await requests_col.create_variation_request(session_id)
+    return {"session_id": _id}
+
 @app.get("/v2/request/status", response_model=schema.StatusRequestResponse)
 async def status_request(session_id: str):
     return await requests_col.get_request(session_id)
 
+@app.get("/v2/request/data")
+async def get_request_data(session_id: str):
+    return await requests_col.get_request_data(session_id)
 @app.get("/v2/users")
 async def get_user(discord_id: int):
     data = users_col.get_user_by_id(discord_id)
