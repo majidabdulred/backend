@@ -1,6 +1,7 @@
 import json
 import secrets
 from datetime import datetime
+import random
 from typing import Optional, Union, Dict
 from bson.json_util import dumps
 import bson.errors
@@ -89,6 +90,23 @@ async def create_custom_request(data):
     request = await collection.insert_one(data)
     return str(request.inserted_id)
 
+async def create_variation_request(session_id):
+    """
+
+    :param data:
+    :return:
+    """
+
+    try:
+        request = await collection.find_one({"_id": ObjectId(session_id)})
+    except bson.errors.InvalidBSON:
+        raise HTTPException(status_code=404, detail="Session_id Invalid")
+
+    if request is None:
+        raise HTTPException(status_code=404, detail="Session_id not found")
+    request.update({"seed":int(random.random() * 1000000)})
+    data = schema.CreateRequestCustom(**request)
+    return await create_custom_request(data)
 async def get_request_data(session_id : str):
     """
     Returns the request with the given session_id
