@@ -48,7 +48,7 @@ class CreateRequestCustom(BaseModel):
     prompt: str
     seed: Optional[int] = int(random.random() * 1000000)
     sampler_name: Optional[str] = "Euler a"
-    batch_size: Optional[int] = 1
+    batch_size: Optional[int] = 4
     steps: Optional[int] = 25
     cfg_scale: Optional[int] = 7
     width: Optional[int] = 512
@@ -56,11 +56,13 @@ class CreateRequestCustom(BaseModel):
     tiling: Optional[bool] = True
     negative_prompt: Optional[str] = ""
     restore_faces: Optional[bool] = True
-
+    class Config:
+        validate_assignment = True
 
 class CreateRequestUpscale(BaseModel):
     request_type = "upscale"
     discord_id: int
+    image_num : int
     resize_mode: Optional[int] = 1
     show_extras_results = False
     upscaling_resize_w: Optional[int] = 2048
@@ -72,7 +74,8 @@ class CreateRequestUpscale(BaseModel):
     extras_upscaler_2_visibility: Optional[int] = 1
     upscale_first: Optional[bool] = True
     prev_session_id: Optional[str]
-
+    class Config:
+        validate_assignment = True
 class CreateRequestImg2Img(BaseModel):
     request_type = "img2img"
     discord_id: int
