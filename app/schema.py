@@ -63,11 +63,11 @@ class CreateRequestUpscale(BaseModel):
     request_type = "upscale"
     discord_id: int
     image_num : int
-    resize_mode: Optional[int] = 1
+    resize_mode: Optional[int] = 0
     show_extras_results = False
     upscaling_resize_w: Optional[int] = 2048
     upscaling_resize_h: Optional[int] = 2048
-    upscaling_resize: Optional[int] = 4
+    upscaling_resize: Optional[int] = 2
     upscaling_crop: Optional[bool] = False
     upscaler_1: Optional[str] = "R-ESRGAN 4x+"
     upscaler_2: Optional[str] = "R-ESRGAN 4x+"
