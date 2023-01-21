@@ -88,7 +88,20 @@ async def create_custom_request(data):
     request = await collection.insert_one(data)
     return str(request.inserted_id)
 
+async def get_request_data(session_id : str):
+    """
+    Returns the request with the given session_id
+    :param session_id:
+    :return:
+    """
+    try:
+        request = await collection.find_one({"_id": ObjectId(session_id)})
+    except bson.errors.InvalidBSON:
+        raise HTTPException(status_code=404, detail="Session_id Invalid")
 
+    if request is None:
+        raise HTTPException(status_code=404, detail="Session_id not found")
+    return request
 async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     """
     Returns the request with the given session_id
