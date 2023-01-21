@@ -136,7 +136,7 @@ async def create_upscale_request(data:schema.CreateRequestUpscale):
     # Deleting the _id because this field is in ObjectId form can cannot be sent as json later on while assigning this
     # request.
     del previous_data["_id"]
-
+    previous_data.update({"seed":previous_data.get("seed")+data.image_num})
     data = data.dict()
 
     data.update({"status": "available",
