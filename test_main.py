@@ -25,10 +25,10 @@ def test_ping_session():
 def test_assign_request():
     response = client.post("/v2/request/assign",
                            headers={"host-session-id": "63a8a45517f6bbf76ab679a0", "version": "1.0"})
-    custom_request_keys = ['session_id', 'request_type', 'prompt', 'seed', 'sampler_name', 'batch_size', 'steps',
+    txt2img_request_keys = ['session_id', 'request_type', 'prompt', 'seed', 'sampler_name', 'batch_size', 'steps',
                            'cfg_scale', 'width', 'height', 'negative_prompt']
     no_available_request_keys = ['detail']
-    assert list(response.json().keys()) in [custom_request_keys, no_available_request_keys]
+    assert list(response.json().keys()) in [txt2img_request_keys, no_available_request_keys]
     assert response.status_code in (200, 404)
 
 
@@ -57,14 +57,14 @@ def test_client():
 
     response = client.post("/v2/request/assign",
                            headers={"host-session-id": host_session_id, "version": "1.0"})
-    custom_request_keys = ['session_id', 'request_type', 'prompt', 'seed', 'sampler_name', 'batch_size', 'steps',
+    txt2img_request_keys = ['session_id', 'request_type', 'prompt', 'seed', 'sampler_name', 'batch_size', 'steps',
                            'cfg_scale', 'width', 'height', 'negative_prompt']
     upscale_request_keys = ["image", "session_id", "request_type", "resize_mode", "show_extras_results",
                             "upscaling_resize_w", "upscaling_resize_h", "upscaling_resize", "upscaling_crop",
                             "upscaler_1",
                             "upscaler_2", "extras_upscaler_2_visibility", "upscale_first"]
     no_available_request_keys = ['detail']
-    assert list(response.json().keys()) in [custom_request_keys, no_available_request_keys, upscale_request_keys]
+    assert list(response.json().keys()) in [txt2img_request_keys, no_available_request_keys, upscale_request_keys]
     assert response.status_code in (200, 404)
 
     if response.status_code == 404:

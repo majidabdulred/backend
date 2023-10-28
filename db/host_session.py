@@ -12,6 +12,22 @@ from db.client import db
 collection: AsyncIOMotorCollection = db.get_collection("hosts")
 
 
+async def get_host(_id: str) -> Union[Dict, None]:
+    """
+    Gets a host from the database.
+    :param _id:
+    :return:
+    """
+    return await collection.find_one({"_id": ObjectId(_id)})
+
+async def set_wallet_id(_id: str, wallet_id: str):
+    """
+    Sets the wallet id of the host.
+    :param _id:
+    :param wallet_id:
+    :return:
+    """
+    await collection.update_one({"_id": ObjectId(_id)}, {"$set": {"wallet_id": wallet_id}})
 async def create_host_session(data: schema.CreateSessionHostRequest) -> str:
     """
     Creates a host session in the database.
@@ -44,7 +60,6 @@ async def set_current_processing(host_session_id, session_id):
     await collection.update_one({"_id": ObjectId(host_session_id)}, {"$set": {"current_processing":
         {
             "$ref": "requests",
-            "$db": "backend",
             "$id": ObjectId(session_id)
         }}})
 

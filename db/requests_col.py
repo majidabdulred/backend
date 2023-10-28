@@ -1,8 +1,10 @@
-import json
+import asyncio
+
 import secrets
 from datetime import datetime
 import random
 from typing import Optional, Union, Dict
+from app import util
 from bson.json_util import dumps
 import bson.errors
 import pymongo
@@ -76,27 +78,22 @@ async def create_avatar_request(data: schema.CreateRequestAvatar):
         raise HTTPException(status_code=404,detail="Duplicate Key Error")
     return _id
 
-async def create_custom_request(data):
+async def create_txt2img_request(data):
     """
     Creates a request in the database
     :param data:
     :return:
     """
-    data = data.dict()
-    data.update({"status": "available",
-                 "discord_id": Int64(data.get("discord_id")),
+    db_data= {"status": "available",
+              "request_type": data.request_type,
+              "parameters": data.parameters.dict(),
+                 "discord_id": Int64(data.discord_id),
                  "created_at": datetime.utcnow(),
-                 "lastModified": datetime.utcnow()})
-    request = await collection.insert_one(data)
+                 "lastModified": datetime.utcnow()}
+    request = await collection.insert_one(db_data)
     return str(request.inserted_id)
 
 async def create_variation_request(session_id):
-    """
-
-    :param data:
-    :return:
-    """
-
     try:
         request = await collection.find_one({"_id": ObjectId(session_id)})
     except bson.errors.InvalidBSON:
@@ -104,14 +101,28 @@ async def create_variation_request(session_id):
 
     if request is None:
         raise HTTPException(status_code=404, detail="Session_id not found")
-    request.update({"seed":int(random.random() * 1000000)})
+    request["parameters"]["seed"] = random.randint(0, 1000000)
     data = schema.CreateRequestCustom(**request)
-    return await create_custom_request(data)
+    return await create_txt2img_request(data)
+
+async def create_upscale_request(data:schema.CreateUpscaleRequest):
+    image = await aws_client.download_file(f"{data.session_id}_{data.image_num}.png")
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    upscale_details = schema.ParametersUPSCALE()
+    response = await collection.insert_one({"status": "available",
+                                 "request_type": "upscale",
+                                 "parameters": upscale_details.dict(exclude={"image"}),
+                                 "discord_id": Int64(data.discord_id),
+                                 "created_at": datetime.utcnow(),
+                                 "lastModified": datetime.utcnow(),
+                                 "bucket": "resources-image-ai",
+                                 "img_path": f"{data.session_id}_{data.image_num}.png"
+                                 })
+    return str(response.inserted_id)
 async def get_request_data(session_id : str):
     """
     Returns the request with the given session_id
-    :param session_id:
-    :return:
     """
     try:
         request = await collection.find_one({"_id": ObjectId(session_id)})
@@ -120,14 +131,9 @@ async def get_request_data(session_id : str):
 
     if request is None:
         raise HTTPException(status_code=404, detail="Session_id not found")
-    return json.loads(dumps(request))
-async def get_request(session_id: str, retry=5) -> Optional[Dict]:
-    """
-    Returns the request with the given session_id
-    :param retry:
-    :param session_id:
-    :return:
-    """
+    return request
+
+async def get_request(session_id: str) -> Optional[Dict]:
     try:
         request = await collection.find_one({"_id": ObjectId(session_id)})
     except bson.errors.InvalidBSON:
@@ -136,51 +142,31 @@ async def get_request(session_id: str, retry=5) -> Optional[Dict]:
     if request is None:
         raise HTTPException(status_code=404, detail="Session_id not found")
     if request.get("status") == "complete":
-        base64_str = await aws_client.download_file(session_id + ".png")
-        if base64_str is None:
-            raise HTTPException(status_code=404, detail="Image not found")
-        return {"status": "complete", "image": base64_str}
-    # elif retry > 0:
-    #     # Using recursion to retry the request for few more times until the image is ready.
-    #     await asyncio.sleep(10)
-    #     return await get_request(session_id, retry-1)
-
-    # To be removed later
-    elif request.get("status") == "available" and request.get("testing") and\
-            request.get("created_at") + timedelta(seconds=30) < datetime.utcnow():
-        return {"status": "complete", "image": open("app/testimage.txt", "r").read()}
+        if request.get("request_type") == "txt2img":
+            return await _get_request_txt2img(request,session_id)
+        elif request.get("request_type") == "upscale":
+            return await _get_request_upscale(request,session_id)
     else:
-        # Recursion limit reached.
         return {"status": request.get("status")}
 
-
-async def create_upscale_request(data:schema.CreateRequestUpscale):
-    """
-    Creates a request in the database
-    :param data:
-    :return:
-    """
-    # Getting the image.
-    previous_data = await collection.find_one({"_id": ObjectId(data.prev_session_id)})
-    if previous_data is None:
-        raise HTTPException(status_code=404, detail="prev_session_id not found")
-
-    # Deleting the _id because this field is in ObjectId form can cannot be sent as json later on while assigning this
-    # request.
-    del previous_data["_id"]
-    previous_data.update({"seed":previous_data.get("seed")+data.image_num})
-    data = data.dict()
-
-    data.update({"status": "available",
-                 "properties": previous_data,
-                 "discord_id": Int64(data.get("discord_id")),
-                 "created_at": datetime.utcnow(),
-                 "lastModified": datetime.utcnow()})
-
-    request = await collection.insert_one(data)
-
-    return str(request.inserted_id)
-
+async def _get_request_txt2img(request,session_id):
+    tasks = []
+    for i in range(request.get("parameters").get("batch_size")):
+        tasks.append(aws_client.download_file(session_id + f"_{i}.png"))
+    images = await asyncio.gather(*tasks)
+    if images is None:
+        print(f"Images not found {session_id}")
+        raise HTTPException(status_code=404, detail="Images not found")
+    images = [i for i in images if i is not None]
+    grid_image = await aws_client.download_file(session_id + f"_grid.png")
+    if grid_image is None:
+        grid_image = util.create_grid_base64(images)
+    return {"status": "complete", "images": images, "grid_image": grid_image}
+async def _get_request_upscale(request,session_id):
+    image = await aws_client.download_file(f"{session_id}_UPSCALE{request.get('parameters').get('upscaling_resize')}X.png")
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return {"status": "complete", "image": image}
 
 async def request_completed(session_id: str):
     """
@@ -213,7 +199,7 @@ async def get_available_request(host_session_id) -> Union[None, Dict]:
     Changes its status to processing adds the processing start time and returns the document
     :return:
     """
-    request = await collection.find_one_and_update({"status": "available","request_type":{"$in":["img2img","custom","upscale"]}},
+    request = await collection.find_one_and_update({"status": "available","request_type":{"$in":["txt2img","upscale"]}},
                                                    {'$set': {"status": 'processing',
                                                              "assigned_to": {
                                                                  "$ref": "hosts",
@@ -231,48 +217,25 @@ async def get_available_request(host_session_id) -> Union[None, Dict]:
 
 
 async def __create_payload(request):
-    if request.get("request_type") == "custom":
+    if request.get("request_type") == "txt2img":
         payload = {
             "request_type": str(request.get("request_type")),
             "session_id": str(request["_id"]),
-            "prompt": request.get("prompt"),
-            "seed": request.get("seed"),
-            "sampler_name": request.get("sampler_name"),
-            "batch_size": request.get("batch_size"),
-            "steps": request.get("steps"),
-            "cfg_scale": request.get("cfg_scale"),
-            "width": request.get("width"),
-            "height": request.get("height"),
-            "negative_prompt": request.get("negative_prompt"),
-            "restore_faces": request.get("restore_faces"),
-            "tiling": request.get("tiling"),
+            "parameters": request.get("parameters"),
         }
     elif request.get("request_type") == "upscale":
-        # base64_str = await aws_client.download_file(request.get("raw_image") + ".png") # Previously used to send the image to the host.
-        # Get the previous request ID.
-        properties = {key:value for key,value in request.get("properties").items() if type(value) in (int,str,bool)}
+        image = await aws_client.download_file(request.get("img_path"))
+        if image is None:
+            raise HTTPException(status_code=404, detail="Image not found")
+        parameters = request.get("parameters")
+        parameters.update({"image":image})
+        if image is None:
+            raise HTTPException(status_code=404, detail="Image not found")
         payload = {
-            "properties" : properties,
-            "session_id": str(request["_id"]),
             "request_type": str(request.get("request_type")),
-            "resize_mode": request.get("resize_mode"),
-            "show_extras_results": request.get("show_extras_results"),
-            "upscaling_resize_w": request.get("upscaling_resize_w"),
-            "upscaling_resize_h": request.get("upscaling_resize_h"),
-            "upscaling_crop": request.get("upscaling_crop"),
-            "upscaler_1": request.get("upscaler_1"),
-            "upscaler_2": request.get("upscaler_2"),
-            "extras_upscaler_2_visibility": request.get("extras_upscaler_2_visibility"),
-            "upscale_first": request.get("upscale_first"),
-            "upscaling_resize": request.get("upscaling_resize"),
-        }
-    elif request.get("request_type") == "img2img":
-        print("Hit 191")
-        base64 = await aws_client.download_file(request.get("raw_image") + ".png")
-        payload = {
-            "image": base64,
             "session_id": str(request["_id"]),
-            "request_type": "img2img",
-            "prompt": request.get("prompt"),
+            "parameters": request.get("parameters"),
         }
+    else:
+        raise HTTPException(status_code=404, detail="Request Type not found")
     return payload
