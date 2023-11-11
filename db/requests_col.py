@@ -105,6 +105,41 @@ async def create_variation_request(session_id):
     data = schema.CreateRequestCustom(**request)
     return await create_txt2img_request(data)
 
+prompts = {"library":("staring up into the infinite maelstrom library, endless books, flying books, spiral staircases, nebula, ominous, cinematic atmosphere, negative dark mode, mc escher, art by sensei jaye, matrix atmosphere, digital code swirling, matte painting, laboratory , sharp , raytracing , light tracing , 8k , ultra preset",
+            "(worst quality, low quality:1.4), (logo, text, watermask, username), NG_DeepNegative_V1_75T, (bad-hands-5, bad-artist:1.2), human, girl , boy , man , female ,male,(bad-image-v2-39000, bad_prompt_version2, bad-hands-5, EasyNegative, NG_DeepNegative_V1_4T, bad-artist-anime:0.7),(worst quality, low quality:1.3), (depth of field, blurry:1.2), (greyscale, monochrome:1.1), nose, cropped, lowres, text, jpeg artifacts, signature, watermark, username, blurry, artist name, trademark, watermark, title,(tan, muscular, loli, petite, child, infant, toddlers, chibi, sd character:1.1), multiple view, Reference sheet, long neck, unclear lines"),
+           "mech-robot":("mecha, robot , war, gundam,1robot, high quality, high resolution. detailed body, detailed, legs , detailed face , detailed metal,8k, ultra realistic, icy background ,explosion in the background, fire  long sword  in right hand, shield in left hand, darker blacks,finely detailed,best quality, extra sharp , 16x anistrophic filtering",
+            "noise, haze, low quality, deformed leg, deformed body, extra hands ,extra legs , blurry foot,text, numbers, extra faces in corners, unnecessary objects,deformed fingers, extra fingers"),
+          "mountain": ("clouds with beautiful land scenery, high quality, finely detailed , intricate details,8k , sharp , mountains , snowfall, high resolution, 8k resolution, darker blacks",
+            "blur , low quality , low resolution, light colors, sunset, yellow lights rays, haze, sun rays"),
+           "hogwarts-castle":("Hogwarts castle , dark environment, intricate details, hdr, 8k, detailed  1guy flying on the broom stick magic trail behind, angel of view ocean level,more visible castle, bridge connected to the castle",
+                              "(EasyNegative:0.8), (worst quality, low quality:1.2),tight, skin tight, impossible clothes, (ribs:1.2)"),
+            "angel-death":("((best quality)),delicate equal wings, otherworldly charm, mystical sky, (Luis Royo:1.2),  ((masterpiece)), (Yoshitaka Amano:1.1), moonlit night, soft colors, (detailed cloudscape:1.3), (high-resolution:1.2),(detailed), alluring succubus, ethereal beauty, perched on a cloud, , enchanting gaze, captivating pose, finely beautiful detailed face, golden ratio face, detailed nose , detailed eyes , detailed lips, finely detailed legs with accurate proportion ,(fantasy illustration:1.3), full body pose, body covering dress, raytracing , light rays",
+                           "3d, cartoon, anime, sketches, (worst quality, bad quality, child, cropped:1.4) ((monochrome)), ((grayscale)), (bad-hands-5:1.0), (badhandv4:1.0), (easynegative:0.8), (bad-artist-anime:0.8), (bad-artist:0.8), (bad_prompt:0.8), (bad-picture-chill-75v:0.8), (bad_prompt_version2:0.8), (bad_quality:0.8), open mouth, crouched,"),
+           "blood-moon":("(masterpiece, best quality:1.4), cinematic light, colorful, high contrast, mountain, grass, tree, night, (horror (theme):1.2), (mon(masterpiece, best quality:1.4), (captivating digital art), cinematic lighting, colorful, high contrast, eerie mountain landscape, lush grass, twisted trees, night scene, (horror theme:1.2), (menacing monster:1.2) lurking in shadows, dark atmosphere, blood rain pouring down, blood-red river flowing, haunting blood moon in the sky, chilling and intense visual experiencester:1.2), dark, blood rain, blood river, blood moon",
+                         "(worst quality:1.2), (low quality:1.2), (lowres:1.1), (monochrome:1.1), (greyscale), multiple views, comic, sketch, (((bad anatomy))), (((deformed))), (((disfigured))), watermark, multiple_views,mutation hands, mutation fingers, extra fingers, missing fingers, watermark"),
+           "female-sorcerer" :(" 8k resolution, female sorcerer in a cloak adorned with magical symbols , intricate details , hdr, (hyper detailed:1.2) , cinematic shot , vignette ,centered, high resolution , sharp image, finely detailed body parts covered in a white dress, medium breasts ,ray tracing, long white hair, same pair of eye, formed hands , black witch hat on the head, left and right eyes identical, finely detailed face , finely detailed eyes , darker blacks, back most background environment, antialiasing 16x, texture quality ultra , blue eyes ",
+                               "(low quality, worst quality:1.4), skinny hands and body, less fingers , more fingers, interlocked fingers, border, open mouth, different eyes , red eyes ,"),
+           "forest-waterfall" : ("fawn drinking water, animals,(masterpiece, ultra quality:1.2), extremely detailed, volumetric lighting, ambient soft lighting, outdoors, nature, forest, trees, grass, plants,  flowers, river, caustics, water flow, ripples, (waterfall:1.2), pond, jungle, lush leaves, fern, clear image ,  8k, raytracing, reflection,  light rays , ultra textured , anistrophic filtered , more greenery,  white flowers near the water, butterflies in front of the view.",
+                                 "(EasyNegative:0.8), (worst quality, low quality:1.2), tight, skin tight, impossible clothes, (ribs:1.2)")
+}
+
+async def create_qr1_request(data: schema.CreateQR1Request):
+    url = data.url
+    if data.prompt not in list(prompts.keys()):
+        raise HTTPException(status_code=404,detail="Prompt not available")
+    parameters = util.get_prompt(prompts[data.prompt])
+
+    response = await collection.insert_one({"status": "available",
+                                            "request_type": "qr1",
+                                            "url": url,
+                                            "discord_id": Int64(data.discord_id),
+                                            "created_at": datetime.utcnow(),
+                                            "lastModified": datetime.utcnow(),
+                                            "parameters": parameters,
+                                            })
+    return str(response.inserted_id)
+
+
 async def create_upscale_request(data:schema.CreateUpscaleRequest):
     image = await aws_client.download_file(f"{data.session_id}_{data.image_num}.png")
     if image is None:
@@ -146,9 +181,15 @@ async def get_request(session_id: str) -> Optional[Dict]:
             return await _get_request_txt2img(request,session_id)
         elif request.get("request_type") == "upscale":
             return await _get_request_upscale(request,session_id)
+        elif request.get("request_type") == "qr1":
+            return await _get_request_qr1(request,session_id)
     else:
         return {"status": request.get("status")}
-
+async def _get_request_qr1(request,session_id):
+    image = await aws_client.download_file(f"{session_id}_QR1.png")
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return {"status": "complete", "image": image}
 async def _get_request_txt2img(request,session_id):
     tasks = []
     for i in range(request.get("parameters").get("batch_size")):
@@ -199,7 +240,7 @@ async def get_available_request(host_session_id) -> Union[None, Dict]:
     Changes its status to processing adds the processing start time and returns the document
     :return:
     """
-    request = await collection.find_one_and_update({"status": "available","request_type":{"$in":["txt2img","upscale"]}},
+    request = await collection.find_one_and_update({"status": "available","request_type":{"$in":["txt2img","upscale","qr1"]}},
                                                    {'$set': {"status": 'processing',
                                                              "assigned_to": {
                                                                  "$ref": "hosts",
@@ -231,6 +272,24 @@ async def __create_payload(request):
         parameters.update({"image":image})
         if image is None:
             raise HTTPException(status_code=404, detail="Image not found")
+        payload = {
+            "request_type": str(request.get("request_type")),
+            "session_id": str(request["_id"]),
+            "parameters": request.get("parameters"),
+        }
+    elif request.get("request_type") == "qr1":
+        url = request.get("url")
+        parameters = request.get("parameters")
+        if len(url) > 22:
+            url = await util.shorten_url(url)
+
+        print(url)
+
+        qr = util.make_qr(url)
+        qr = util.image_to_base64(qr)
+
+        parameters["alwayson_scripts"]["controlnet"]["args"][0]["input_image"] = qr
+        parameters["alwayson_scripts"]["controlnet"]["args"][1]["input_image"] = qr
         payload = {
             "request_type": str(request.get("request_type")),
             "session_id": str(request["_id"]),

@@ -64,7 +64,10 @@ async def submit_request(data: schema.SubmitImageRequesttxt2img | schema.SubmitI
     elif data.request_type == "upscale":
         response = await requests_col.collection.find_one({"_id": ObjectId(data.session_id)})
         upscaling_resize = response.get("parameters").get("upscaling_resize")
-        await aws_client.upload_base64_to_aws2(data.image, data.session_id, upscaling_resize)
+        await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_UPSCALE{upscaling_resize}X.png",)
+    elif data.request_type == "qr1":
+        await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_QR1.png",)
+
     await requests_col.request_completed(data.session_id)
     print("Creating Payment")
     asyncio.get_event_loop().create_task(host_session.set_current_processing_as_none(host_session_id))
@@ -95,6 +98,13 @@ async def create_upscale_request(data: schema.CreateUpscaleRequest):
     _id = await requests_col.create_upscale_request(data)
     await users_col.append_request(data.discord_id, _id)
     return {"session_id": _id}
+
+@app.post("/v3/user/create-qr1")
+async def create_qr1_request(data: schema.CreateQR1Request):
+    _id = await requests_col.create_qr1_request(data)
+    await users_col.append_request(data.discord_id, _id)
+    return {"session_id": _id}
+
 @app.post("/v3/user/create-variation")
 async def create_variation_request(session_id: str):
     _id = await requests_col.create_variation_request(session_id)

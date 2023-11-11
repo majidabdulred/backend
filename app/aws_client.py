@@ -33,9 +33,9 @@ async def upload_base64_to_aws(base64_string, name,s3=None):
     obj = await s3.Object('resources-image-ai', name + ".png")
     await obj.put(Body=base64.b64decode(base64_string.split(",", 1)[0]))
 
-async def upload_base64_to_aws2(base64_string, name,upscaling_resize):
+async def upload_base64_to_aws2(base64_string, name):
     async with session.resource("s3") as s3:
-        obj = await s3.Object('resources-image-ai', f"{name}_UPSCALE{upscaling_resize}X.png")
+        obj = await s3.Object('resources-image-ai', name)
         await obj.put(Body=base64.b64decode(base64_string.split(",", 1)[0]))
 
 

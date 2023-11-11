@@ -3,8 +3,6 @@ import random
 from typing import Optional
 
 from pydantic import BaseModel,validator
-
-
 class CreateSessionHostRequest(BaseModel):
     gpu_name: str
     gpu_uuid: str
@@ -23,11 +21,14 @@ class PingOnlineRequest(BaseModel):
 class PingOnlineResponse(BaseModel):
     pass
 
-
+class CreateQR1Request(BaseModel):
+    discord_id: int
+    url : str
+    prompt: str
 class SubmitImageRequesttxt2img(BaseModel):
     request_type: str
     session_id: str
-    grid_image: str
+    grid_image: Optional[str]
     images: List[str]
 
 class SubmitImageRequestUpscale(BaseModel):
