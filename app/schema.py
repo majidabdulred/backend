@@ -120,7 +120,8 @@ class ParametersTXT2IMG(BaseModel):
 
 class CreateRequestCustom(BaseModel):
     request_type = "txt2img"
-    discord_id: int
+    discord_id: Optional[int]
+    user_id: Optional[str]
     parameters: ParametersTXT2IMG
     class Config:
         validate_assignment = True

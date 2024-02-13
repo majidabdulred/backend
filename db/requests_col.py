@@ -84,12 +84,19 @@ async def create_txt2img_request(data):
     :param data:
     :return:
     """
+
     db_data= {"status": "available",
               "request_type": data.request_type,
               "parameters": data.parameters.dict(),
-                 "discord_id": Int64(data.discord_id),
                  "created_at": datetime.utcnow(),
                  "lastModified": datetime.utcnow()}
+
+    if data.discord_id is not  None:
+        db_data.update({"discord_id": Int64(data.discord_id)})
+
+    if data.user_id is not None:
+        db_data.update({"user_id": ObjectId(data.user_id)})
+
     request = await collection.insert_one(db_data)
     return str(request.inserted_id)
 
@@ -209,19 +216,32 @@ async def _get_request_upscale(request,session_id):
         raise HTTPException(status_code=404, detail="Image not found")
     return {"status": "complete", "image": image}
 
-async def request_completed(session_id: str):
+async def request_completed_single_output(session_id: str,location):
     """
     Updates the status of the request to available.
     {"status":"complete","processed_at":datetime.utcnow()}
     """
     status = await collection.update_one({'_id': ObjectId(session_id)},
                                          {'$set': {"status": 'complete',
-                                                   "processed_at": datetime.utcnow()},
+                                                   "processed_at": datetime.utcnow(),
+                                                   "output":{"images":[location]}},
                                           "$currentDate": {"lastModified": True}},
                                          )
     if not status.matched_count:
         raise HTTPException(status_code=404, detail="Session_id not found")
-
+async def request_completed_txt2img(session_id: str,locations,grid_location):
+    """
+    Updates the status of the request to available.
+    {"status":"complete","processed_at":datetime.utcnow()}
+    """
+    status = await collection.update_one({'_id': ObjectId(session_id)},
+                                         {'$set': {"status": 'complete',
+                                                   "processed_at": datetime.utcnow(),
+                                                   "output":{"images":locations,"grid_image":grid_location}},
+                                          "$currentDate": {"lastModified": True}},
+                                         )
+    if not status.matched_count:
+        raise HTTPException(status_code=404, detail="Session_id not found")
 
 async def delete_request(session_id: str):
     """

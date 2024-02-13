@@ -26,18 +26,18 @@ async def upload_submitted_images(data : schema.SubmitImageRequesttxt2img):
         tasks = []
         for i in enumerate(data.images):
             tasks.append(upload_base64_to_aws(i[1], data.session_id + "_" + str(i[0]) ,s3))
-        tasks.append(upload_base64_to_aws(data.grid_image, data.session_id + "_" + "grid",s3))
-        await asyncio.gather(*tasks)
-
+        locations = await asyncio.gather(*tasks)
+        grid_location = await upload_base64_to_aws(data.grid_image, data.session_id + "_" + "grid",s3)
+        return locations, grid_location
 async def upload_base64_to_aws(base64_string, name,s3=None):
     obj = await s3.Object('resources-image-ai', name + ".png")
     await obj.put(Body=base64.b64decode(base64_string.split(",", 1)[0]))
-
+    return f"s3://resources-image-ai/{name}.png"
 async def upload_base64_to_aws2(base64_string, name):
     async with session.resource("s3") as s3:
         obj = await s3.Object('resources-image-ai', name)
         await obj.put(Body=base64.b64decode(base64_string.split(",", 1)[0]))
-
+        return f"s3://resources-image-ai/{name}"
 
 async def delete_file(name: str):
     async with session.resource("s3") as s3:

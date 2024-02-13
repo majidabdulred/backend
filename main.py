@@ -57,18 +57,19 @@ async def assign_request(host_session_id=Header(), version=Header()):
 
 
 @app.post("/v3/host/submit")
-async def submit_request(data: schema.SubmitImageRequesttxt2img | schema.SubmitImageRequestUpscale,
+async def submit_request(data: Union[schema.SubmitImageRequesttxt2img,schema.SubmitImageRequestUpscale],
                          host_session_id=Header(), version=Header()):
     if data.request_type == "txt2img":
-        await aws_client.upload_submitted_images(data)
+        locations,grid_location = await aws_client.upload_submitted_images(data)
+        await requests_col.request_completed_txt2img(data.session_id,locations,grid_location)
     elif data.request_type == "upscale":
         response = await requests_col.collection.find_one({"_id": ObjectId(data.session_id)})
         upscaling_resize = response.get("parameters").get("upscaling_resize")
-        await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_UPSCALE{upscaling_resize}X.png",)
+        location = await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_UPSCALE{upscaling_resize}X.png",)
+        await requests_col.request_completed_single_output(data.session_id,location)
     elif data.request_type == "qr1":
-        await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_QR1.png",)
-
-    await requests_col.request_completed(data.session_id)
+        location = await aws_client.upload_base64_to_aws2(data.image,  f"{data.session_id}_QR1.png",)
+        await requests_col.request_completed_single_output(data.session_id,location)
     print("Creating Payment")
     asyncio.get_event_loop().create_task(host_session.set_current_processing_as_none(host_session_id))
     return {"success": True}
@@ -78,7 +79,8 @@ async def submit_request(data: schema.SubmitImageRequesttxt2img | schema.SubmitI
 @app.post("/v3/user/create-txt2img", response_model=schema.CreateRequestResponse)
 async def create_txt2img_request(data: schema.CreateRequestCustom):
     _id = await requests_col.create_txt2img_request(data)
-    await users_col.append_request(data.discord_id, _id)
+    if data.discord_id:
+        await users_col.append_request(data.discord_id, _id)
     return {"session_id": _id}
 
 
@@ -110,13 +112,13 @@ async def create_variation_request(session_id: str):
     _id = await requests_col.create_variation_request(session_id)
     return {"session_id": _id}
 
-@app.get("/v3/user/status")
-async def status_request(session_id: str):
-    return await requests_col.get_request(session_id)
-
-@app.get("/v3/user/image")
-async def get_image(session_id:str,image_num:int):
-    return {"image": await aws_client.download_file(session_id + f"_{image_num}.png")}
+# @app.get("/v3/user/status")
+# async def status_request(session_id: str):
+#     return await requests_col.get_request(session_id)
+#
+# @app.get("/v3/user/image")
+# async def get_image(session_id:str,image_num:int):
+#     return {"image": await aws_client.download_file(session_id + f"_{image_num}.png")}
 
 @app.get("/v3/user/data")
 async def get_request_data(session_id: str):
